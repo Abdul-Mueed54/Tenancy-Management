@@ -14,7 +14,7 @@ import { useDocumentViewer } from '@/hooks/useDocumentViewer';
 import { DocumentViewerModal } from '@/components/ui/document-viewer-modal';
 
 export default function TenantDetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, isReadOnly } = useLocalSearchParams<{ id: string, isReadOnly: string }>();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -80,11 +80,6 @@ export default function TenantDetailsScreen() {
   const hasDocument = !!agreement.attachment_uri;
   const dynamicMenuItems: DropdownMenuItem[] = [
     {
-      label: "Edit Tenant",
-      icon: "pencil",
-      onPress: () => router.push(`/tenants/edit?id=${tenant.id}`),
-    },
-    {
       label: "Lease History",
       icon: "time",
       onPress: () => {
@@ -93,6 +88,13 @@ export default function TenantDetailsScreen() {
       },
     },
   ];
+
+  if (tenant.is_active) {
+  dynamicMenuItems.unshift({
+    label: "Edit Tenant",
+    icon: "pencil",
+    onPress: () => router.push(`/tenants/edit?id=${tenant.id}`),
+  });
 
   if (!hasDocument) {
     dynamicMenuItems.push({
@@ -117,6 +119,7 @@ export default function TenantDetailsScreen() {
       },
     });
   }
+}
 
   dynamicMenuItems.push({
     label: tenant.is_active ? 'Vacate / Move Out' : 'Reactivate Tenant',
@@ -167,16 +170,21 @@ export default function TenantDetailsScreen() {
         <DisplayAgreementDetailsOfTenant tenant={tenant} agreement={agreement} />
 
         <TouchableOpacity
+          disabled={!tenant.is_active}
           onPress={() => router.push(`/ledgers/${agreement.id}`)}
-          className="bg-white rounded-2xl p-5 mb-12 shadow-sm border border-border flex-row justify-between items-center"
+          className={`bg-white rounded-2xl p-5 mb-12 shadow-sm border border-border flex-row justify-between items-center ${
+            !tenant.is_active ? 'opacity-50 bg-muted/50' : ''
+          }`}
         >
           <View className="flex-row items-center">
-            <View className="bg-teal-100 p-2 rounded-lg mr-3">
-              <Ionicons name="wallet" size={24} color="#0f766e" />
+            <View className={`p-2 rounded-lg mr-3 ${!tenant.is_active ? 'bg-gray-200' : 'bg-teal-100'}`}>
+              <Ionicons name={!tenant.is_active ? "lock-closed" : "wallet"} size={24} color={!tenant.is_active ? "#a1a1aa" : "#0f766e"} />
             </View>
             <View>
               <Text className="font-bold text-foreground text-lg">Manage Finances</Text>
-              <Text className="text-muted-foreground text-xs">View ledgers, payments & misc charges</Text>
+              <Text className="text-muted-foreground text-xs">
+                {!tenant.is_active ? "Ledger locked, view summary PDF for history" : "View ledgers, payments & misc charges"}
+              </Text>
             </View>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#a1a1aa" />

@@ -169,13 +169,22 @@ export const getArchivedTenants = async () => {
         endDate: agreements.end_date,
         monthlyRent: agreements.monthly_rent,
       })
-      .from(agreements)
-      .innerJoin(tenants, eq(agreements.tenant_id, tenants.id))
+      .from(tenants)
+      .innerJoin(agreements, eq(tenants.id, agreements.tenant_id,))
       .innerJoin(buildings, eq(agreements.building_id, buildings.id))
       .where(eq(tenants.is_active, false))
-      .orderBy(desc(agreements.end_date)); // Shows the most recently ended leases first
+      .orderBy(desc(agreements.start_date)); // Shows the most recently ended leases first
 
-    return { success: true, data: result };
+    const uniqueArchives = [];
+    const seenTenants = new Set();
+
+    for (const row of result) {
+      if (!seenTenants.has(row.tenantId)) {
+        uniqueArchives.push(row);
+        seenTenants.add(row.tenantId);
+      }
+    }
+    return { success: true, data: uniqueArchives };
   } catch (error) {
     console.error("Error fetching archived agreements:", error);
     return { success: false, data: [] };

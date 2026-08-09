@@ -101,7 +101,7 @@ export const getFullTenantDetails = async (tenantId: string) => {
       .from(tenants)
       .innerJoin(agreements, eq(tenants.id, agreements.tenant_id))
       .where(eq(tenants.id, tenantId))
-      .orderBy(desc(agreements.start_date)) // fetching on the basis of start date so that we can get the most recent (active) one, so we can ultimately use the same fuction for archived and active both tenants
+      .orderBy(desc(agreements.start_date)) // fetching on the basis of start date so that we can get the most recent (active) one, so we can ultimately use the same fuction for archived and active both tenants. Also it will help us to show onl one div for one tenant in showcase.
       .limit(1);
 
     return { success: true, data: result.length > 0 ? result[0] : null };
