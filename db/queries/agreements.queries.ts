@@ -161,6 +161,7 @@ export const getArchivedTenants = async () => {
     const result = await db
       .select({
         id: agreements.id,
+        tenantId: agreements.tenant_id,
         tenantName: tenants.name,
         buildingName: buildings.name,
         unitNumber: agreements.unit_number,

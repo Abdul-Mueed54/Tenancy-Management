@@ -8,6 +8,7 @@ import { getArchivedTenants } from '@/db/queries/agreements.queries';
 
 type ArchivedAgreement = {
   id: string;
+  tenantId: string;
   tenantName: string;
   buildingName: string;
   unitNumber: string;
@@ -35,6 +36,9 @@ export default function ArchiveScreen() {
   );
 
   const renderArchiveCard = ({ item }: { item: ArchivedAgreement }) => (
+    <TouchableOpacity
+    onPress={() => router.push(`/tenants/${item.tenantId}`)}
+  >
     <View className="bg-white border border-border rounded-xl p-4 mb-3 shadow-sm opacity-80">
       {/* DATE EMPHASIS AT THE TOP */}
       <View className="flex-row items-center mb-2">
@@ -57,6 +61,7 @@ export default function ArchiveScreen() {
         </View>
       </View>
     </View>
+  </TouchableOpacity>
   );
 
   return (

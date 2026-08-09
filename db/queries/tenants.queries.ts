@@ -2,7 +2,7 @@ import { RegisterTenantPayload } from "@/app/types/types";
 import { db } from "..";
 import { activity_logs, agreements, ledgers, tenants } from "../schema";
 import dayjs from "dayjs";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 // Add new tenant
 export const registerNewTenant = async (data: RegisterTenantPayload) => {
@@ -100,10 +100,11 @@ export const getFullTenantDetails = async (tenantId: string) => {
       })
       .from(tenants)
       .innerJoin(agreements, eq(tenants.id, agreements.tenant_id))
-      .where (and(eq(tenants.id, tenantId), eq(agreements.is_active, true)))
+      .where(eq(tenants.id, tenantId))
+      .orderBy(desc(agreements.start_date)) // fetching on the basis of start date so that we can get the most recent (active) one, so we can ultimately use the same fuction for archived and active both tenants
       .limit(1);
 
-    return { success: true, data: result[0] };
+    return { success: true, data: result.length > 0 ? result[0] : null };
   } catch (error) {
     console.error("Error fetching full tenant details:", error);
     return { success: false, data: null };
