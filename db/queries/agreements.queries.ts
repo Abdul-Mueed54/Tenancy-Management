@@ -156,7 +156,7 @@ export const getAgreementForRenewal = async (agreementId: string) => {
   }
 };
 
-export const getArchivedAgreements = async () => {
+export const getArchivedTenants = async () => {
   try {
     const result = await db
       .select({
@@ -171,7 +171,7 @@ export const getArchivedAgreements = async () => {
       .from(agreements)
       .innerJoin(tenants, eq(agreements.tenant_id, tenants.id))
       .innerJoin(buildings, eq(agreements.building_id, buildings.id))
-      .where(eq(agreements.is_active, false))
+      .where(eq(tenants.is_active, false))
       .orderBy(desc(agreements.end_date)); // Shows the most recently ended leases first
 
     return { success: true, data: result };

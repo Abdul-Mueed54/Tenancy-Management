@@ -4,10 +4,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
   return (
-    <View className="flex-1 bg-muted/10">
+    <View className="flex-1 bg-background pt-12">
       {/* HEADER */}
-      <View className="px-4 pt-12 pb-4 border-b border-border bg-white shadow-sm">
-        <Text className="text-xl font-bold text-foreground">Settings</Text>
+      <View className="flex-row justify-between items-center px-4 pb-4 border-b border-border">
+        <Text className="text-2xl font-bold text-foreground">Settings</Text>
       </View>
 
       <ScrollView className="flex-1 p-4">
@@ -17,7 +17,7 @@ export default function SettingsScreen() {
 
         <View className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
           <TouchableOpacity
-            onPress={() => router.push('/agreements/archive')}
+            onPress={() => router.push('/tenants/archive')}
             className="flex-row items-center justify-between p-4"
           >
             <View className="flex-row items-center">
@@ -26,7 +26,7 @@ export default function SettingsScreen() {
               </View>
               <View>
                 <Text className="text-base font-bold text-foreground">Archived Leases</Text>
-                <Text className="text-xs text-muted-foreground">View past tenants and historical contracts</Text>
+                <Text className="text-xs text-muted-foreground">View past tenants</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#a1a1aa" />

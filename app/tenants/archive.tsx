@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
-import { getArchivedAgreements } from '@/db/queries/agreements.queries';
+import { getArchivedTenants } from '@/db/queries/agreements.queries';
 
 type ArchivedAgreement = {
   id: string;
@@ -24,7 +24,7 @@ export default function ArchiveScreen() {
     useCallback(() => {
       const fetchArchives = async () => {
         setIsLoading(true);
-        const result = await getArchivedAgreements();
+        const result = await getArchivedTenants();
         if (result.success && result.data) {
           setArchives(result.data as ArchivedAgreement[]);
         }
@@ -70,7 +70,7 @@ export default function ArchiveScreen() {
         </TouchableOpacity>
         <View>
           <Text className="text-xl font-bold text-foreground">Archived Leases</Text>
-          <Text className="text-xs text-muted-foreground">Historical records of past agreements</Text>
+          <Text className="text-xs text-muted-foreground">Historical records of past tenants</Text>
         </View>
       </View>
 
@@ -84,7 +84,7 @@ export default function ArchiveScreen() {
           <Ionicons name="file-tray-outline" size={64} color="#a1a1aa" className="mb-4" />
           <Text className="text-xl font-bold text-foreground mb-2 text-center">No Archives Yet</Text>
           <Text className="text-muted-foreground text-center">
-            When tenants move out or renew, their past leases will appear here.
+            When tenants move out, they will appear here along with their info
           </Text>
         </View>
       ) : (
