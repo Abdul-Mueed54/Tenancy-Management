@@ -72,11 +72,14 @@ export const processLedgerPayment = async (ledgerId: string, paymentAmount: numb
 export const syncMonthlyRentLedgers = async () => {
   try {
     const currentMonth = dayjs().format('YYYY-MM');
+    const currentDay = dayjs().date();
+    // const currentMonth = dayjs().add(1, 'month').format('YYYY-MM');
     const activeAgreements = await db
       .select({
         id: agreements.id,
         tenant_id: agreements.tenant_id,
         monthly_rent: agreements.monthly_rent,
+        rent_due_day: agreements.rent_due_day,
       })
       .from(agreements)
       .where(eq(agreements.is_active, true));
@@ -94,9 +97,16 @@ export const syncMonthlyRentLedgers = async () => {
       );
 
     const billedAgreementIds = new Set(existingLedgers.map((l) => l.agreement_id));
-    const missingBills = activeAgreements.filter(
-      (agreement) => !billedAgreementIds.has(agreement.id)
-    );
+    const missingBills = activeAgreements.filter((agreement) => {
+      // If they already have a bill, skip them
+      if (billedAgreementIds.has(agreement.id)) return false;
+
+      // If today is BEFORE their due date, wait to generate the bill
+      // (Fallback to 1 if rent_due_day is null)
+      if (currentDay < (agreement.rent_due_day || 1)) return false;
+
+      return true; // Otherwise, generate it!
+    });
 
     if (missingBills.length === 0) return { success: true, message: 'All up to date.' };
 
@@ -117,5 +127,49 @@ export const syncMonthlyRentLedgers = async () => {
   } catch (error) {
     console.error("Failed to sync monthly rent:", error);
     return { success: false, error };
+  }
+};
+
+export const generateCustomRentBill = async (agreementId: string, billingMonth: string, amount: number) => {
+  try {
+    const [agreement] = await db
+      .select({ tenant_id: agreements.tenant_id })
+      .from(agreements)
+      .where(eq(agreements.id, agreementId))
+      .limit(1);
+
+    if (!agreement) throw new Error("Agreement not found");
+
+    const [existing] = await db
+      .select()
+      .from(ledgers)
+      .where(
+        and(
+          eq(ledgers.agreement_id, agreementId),
+          eq(ledgers.entry_type, 'rent'),
+          eq(ledgers.billing_month, billingMonth)
+        )
+      )
+      .limit(1);
+
+    if (existing) {
+      return { success: false, message: "A rent bill for this month already exists." };
+    }
+
+    await db.insert(ledgers).values({
+      agreement_id: agreementId,
+      tenant_id: agreement.tenant_id,
+      entry_type: 'rent',
+      billing_month: billingMonth,
+      total_payable_amount: amount,
+      amount_due: amount,
+      amount_paid: 0,
+      status: 'pending',
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to generate custom bill:", error);
+    return { success: false, message: "An error occurred." };
   }
 };

@@ -4,8 +4,9 @@ import { useState } from 'react';
 import dayjs from 'dayjs';
 
 import { CustomDrawer } from '@/components/ui/drawer';
-import { processLedgerPayment } from '@/db/queries/ledgers.queries';
+import { generateCustomRentBill, processLedgerPayment } from '@/db/queries/ledgers.queries';
 import { CustomAlertDialog } from '@/components/ui/alert-dialog';
+import { GenerateBillModal } from './generate-bill-modal';
 
 interface Props {
   ledgers: any[];
@@ -19,10 +20,28 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
   const [showPartialModal, setShowPartialModal] = useState(false);
   const [showFullPayAlert, setShowFullPayAlert] = useState(false);
   const [selectedLedger, setSelectedLedger] = useState<any>(null);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const initiateFullPayment = (ledger: any) => {
     setSelectedLedger(ledger);
     setShowFullPayAlert(true);
+  };
+
+  const handleGenerateBill = async (billingMonth: string, amount: number) => {
+    setIsGenerating(true);
+
+    const result = await generateCustomRentBill(agreementId, billingMonth, amount);
+
+    setIsGenerating(false);
+
+    if (result.success) {
+      setShowGenerateModal(false);
+      showToast("Bill generated successfully!", "success");
+      onRefresh();
+    } else {
+      showToast(result.message || "Failed to generate bill.", "error");
+    }
   };
 
   const handleConfirmFullPayment = async () => {
@@ -65,7 +84,10 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
     <View>
       <View className="flex-row justify-between items-center mb-4">
         <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Rent Ledgers</Text>
-        <TouchableOpacity className="bg-primary-50 px-3 py-1.5 rounded-lg flex-row items-center border border-primary-200">
+        <TouchableOpacity
+          onPress={() => setShowGenerateModal(true)}
+          className="bg-white px-3 py-1.5 rounded-lg flex-row items-center border border-primary-200"
+        >
           <Ionicons name="add" size={14} color="#0f766e" />
           <Text className="text-primary-700 font-bold ml-1 text-xs">Generate Bill</Text>
         </TouchableOpacity>
@@ -130,7 +152,6 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
         onAction={handleConfirmFullPayment}
       />
 
-      {/* USING THE NEW GENERIC DRAWER */}
       {selectedLedger && (
         <CustomDrawer
           visible={showPartialModal}
@@ -141,6 +162,13 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
           onConfirm={handlePartialPayment}
         />
       )}
+
+      <GenerateBillModal
+        visible={showGenerateModal}
+        onClose={() => setShowGenerateModal(false)}
+        isSubmitting={isGenerating}
+        onConfirm={handleGenerateBill}
+      />
     </View>
   );
 }
