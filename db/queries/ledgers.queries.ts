@@ -174,6 +174,51 @@ export const generateCustomRentBill = async (agreementId: string, billingMonth: 
   }
 };
 
+export const addUtilityBill = async (agreementId: string, entryType: string, billingMonth: string, amount: number) => {
+  try {
+    const [agreement] = await db
+      .select({ tenant_id: agreements.tenant_id })
+      .from(agreements)
+      .where(eq(agreements.id, agreementId))
+      .limit(1);
+
+    if (!agreement) throw new Error("Agreement not found");
+
+    // Prevent duplicate bills of the same type for the same month
+    const [existing] = await db
+      .select()
+      .from(ledgers)
+      .where(
+        and(
+          eq(ledgers.agreement_id, agreementId),
+          eq(ledgers.entry_type, entryType),
+          eq(ledgers.billing_month, billingMonth)
+        )
+      )
+      .limit(1);
+
+    if (existing) {
+      return { success: false, message: `A ${entryType.replace('_', ' ')} bill for this month already exists.` };
+    }
+
+    await db.insert(ledgers).values({
+      agreement_id: agreementId,
+      tenant_id: agreement.tenant_id,
+      entry_type: entryType, // 'k_electric', 'gas', or 'water'
+      billing_month: billingMonth,
+      total_payable_amount: amount,
+      amount_due: amount,
+      amount_paid: 0,
+      status: 'pending',
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to add utility bill:", error);
+    return { success: false, message: "An error occurred." };
+  }
+};
+
 export const deleteLedgerEntry = async (ledgerId: string) => {
   try {
     await db.delete(ledgers).where(eq(ledgers.id, ledgerId));

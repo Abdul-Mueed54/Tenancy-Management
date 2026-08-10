@@ -95,7 +95,7 @@ export default function ManageFinancesScreen() {
         {activeTab === 'rent' && <RentList ledgers={finances.rentLedgers} agreementId={agreement_id} onRefresh={fetchFinances} showToast={showToast}/>}
 
         {/* UTILITY BILLS TAB VIEW */}
-        {activeTab === 'utilities' && <UtilityList ledgers={finances.utilityLedgers} agreementId={agreement_id} />}
+        {activeTab === 'utilities' && <UtilityList ledgers={finances.utilityLedgers} agreementId={agreement_id} onRefresh={fetchFinances} showToast={showToast}/>}
 
         {/* MISC CHARGES TAB VIEW */}
         {activeTab === 'misc' && <MiscList charges={finances.miscCharges} agreementId={agreement_id} />}

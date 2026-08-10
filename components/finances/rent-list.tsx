@@ -27,7 +27,7 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
   const [ledgerToDelete, setLedgerToDelete] = useState<any>(null);
 
   const initiateDelete = (ledger: any) => {
-    Vibration.vibrate(50);
+    Vibration.vibrate(1);
     setLedgerToDelete(ledger);
     setShowDeleteAlert(true);
   };
