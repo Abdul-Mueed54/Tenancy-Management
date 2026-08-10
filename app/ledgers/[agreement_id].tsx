@@ -9,10 +9,13 @@ import { FinancesTabs } from '@/components/finances/finances-tabs';
 import { RentList } from '@/components/finances/rent-list';
 import { UtilityList } from '@/components/finances/utility-list';
 import { MiscList } from '@/components/finances/misc-list';
+import { CustomToast } from '@/components/ui/toast';
 
 
 export default function ManageFinancesScreen() {
   const { agreement_id } = useLocalSearchParams<{ agreement_id: string }>();
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ visible: true, message, type });
   const [isLoading, setIsLoading] = useState(true);
   const [finances, setFinances] = useState<{ rentLedgers: any[], utilityLedgers: any[], miscCharges: any[] }>({
     rentLedgers: [],
@@ -65,6 +68,8 @@ export default function ManageFinancesScreen() {
     <View className="flex-1">
       <Stack.Screen options={{ headerShown: false }} />
 
+      <CustomToast visible={toast.visible} message={toast.message} type={toast.type} onHide={() => setToast({ ...toast, visible: false })} />
+
       {/* HEADER */}
       <View className="flex-row items-center px-4 pt-12 pb-4 border-b border-border shadow-sm">
         <TouchableOpacity onPress={() => router.back()} className="p-2 mr-1 -ml-2">
@@ -87,7 +92,7 @@ export default function ManageFinancesScreen() {
         <FinancesTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
         {/* RENT TAB VIEW */}
-        {activeTab === 'rent' && <RentList ledgers={finances.rentLedgers} agreementId={agreement_id} />}
+        {activeTab === 'rent' && <RentList ledgers={finances.rentLedgers} agreementId={agreement_id} onRefresh={fetchFinances} showToast={showToast}/>}
 
         {/* UTILITY BILLS TAB VIEW */}
         {activeTab === 'utilities' && <UtilityList ledgers={finances.utilityLedgers} agreementId={agreement_id} />}
