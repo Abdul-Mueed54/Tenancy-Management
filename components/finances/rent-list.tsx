@@ -1,10 +1,10 @@
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Vibration } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import dayjs from 'dayjs';
 
 import { CustomDrawer } from '@/components/ui/drawer';
-import { generateCustomRentBill, processLedgerPayment } from '@/db/queries/ledgers.queries';
+import { deleteLedgerEntry, generateCustomRentBill, processLedgerPayment } from '@/db/queries/ledgers.queries';
 import { CustomAlertDialog } from '@/components/ui/alert-dialog';
 import { GenerateBillModal } from './generate-bill-modal';
 
@@ -22,6 +22,33 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
   const [selectedLedger, setSelectedLedger] = useState<any>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  // Delete State
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [ledgerToDelete, setLedgerToDelete] = useState<any>(null);
+
+  const initiateDelete = (ledger: any) => {
+    Vibration.vibrate(50);
+    setLedgerToDelete(ledger);
+    setShowDeleteAlert(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!ledgerToDelete) return;
+
+    setShowDeleteAlert(false);
+    setIsProcessing(true);
+
+    const result = await deleteLedgerEntry(ledgerToDelete.id);
+
+    setIsProcessing(false);
+
+    if (result.success) {
+      showToast("Ledger entry deleted successfully.", "success");
+      onRefresh();
+    } else {
+      showToast("Failed to delete entry.", "error");
+    }
+  };
 
   const initiateFullPayment = (ledger: any) => {
     setSelectedLedger(ledger);
@@ -97,6 +124,12 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
         <Text className="text-center text-muted-foreground mt-8 text-sm">No rent ledgers found.</Text>
       ) : (
         ledgers.map((ledger) => (
+          <TouchableOpacity
+          key={ledger.id}
+          activeOpacity={0.6}
+          onLongPress={() => initiateDelete(ledger)}
+          delayLongPress={400}
+        >
           <View key={ledger.id} className="bg-white rounded-xl p-4 mb-3 border border-border shadow-sm">
 
             <View className="flex-row justify-between items-center">
@@ -119,9 +152,9 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
               <View className="flex-row mt-4 pt-3 border-t border-border/50">
                 <TouchableOpacity
                   disabled={isProcessing}
-                  onPress={() => initiateFullPayment(ledger)} // Trigger custom dialog
+                  onPress={() => initiateFullPayment(ledger)}
                   className="flex-1 bg-primary-700 py-2 rounded-lg items-center mr-2 flex-row justify-center"
-                >
+                  >
                   <Ionicons name="checkmark-circle-outline" size={16} color="#fff" className="mr-1" />
                   <Text className="text-white font-bold text-xs">Mark Fully Paid</Text>
                 </TouchableOpacity>
@@ -130,19 +163,21 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
                   disabled={isProcessing}
                   onPress={() => {
                     setSelectedLedger(ledger);
-                    setShowPartialModal(true); // Trigger custom bottom modal
+                    setShowPartialModal(true);
                   }}
                   className="flex-1 bg-muted/20 border border-border py-2 rounded-lg items-center flex-row justify-center"
-                >
+                  >
                   <Ionicons name="pie-chart-outline" size={16} color="#3f3f46" className="mr-1" />
                   <Text className="text-zinc-700 font-bold text-xs">Record Partial</Text>
                 </TouchableOpacity>
               </View>
             )}
           </View>
+          </TouchableOpacity>
         ))
       )}
 
+      {/* mark fully paid dialog */}
       <CustomAlertDialog
         visible={showFullPayAlert}
         onOpenChange={setShowFullPayAlert}
@@ -150,6 +185,17 @@ export function RentList({ ledgers, agreementId, onRefresh, showToast }: Props) 
         description={`Mark Rs ${selectedLedger?.amount_due} as fully paid for ${dayjs(selectedLedger?.billing_month).format('MMM YYYY')}?`}
         actionText="Confirm"
         onAction={handleConfirmFullPayment}
+      />
+
+      {/* delete dialog */}
+      <CustomAlertDialog
+        visible={showDeleteAlert}
+        onOpenChange={setShowDeleteAlert}
+        title="Delete Ledger Entry"
+        description={`Are you sure you want to delete the bill for ${dayjs(ledgerToDelete?.billing_month).format('MMMM YYYY')}? This action cannot be undone.`}
+        actionText="Delete"
+        isDestructive={true}
+        onAction={handleConfirmDelete}
       />
 
       {selectedLedger && (

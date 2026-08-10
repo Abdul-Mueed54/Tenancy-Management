@@ -173,3 +173,13 @@ export const generateCustomRentBill = async (agreementId: string, billingMonth: 
     return { success: false, message: "An error occurred." };
   }
 };
+
+export const deleteLedgerEntry = async (ledgerId: string) => {
+  try {
+    await db.delete(ledgers).where(eq(ledgers.id, ledgerId));
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete ledger entry:", error);
+    return { success: false, message: "An error occurred while deleting." };
+  }
+};
