@@ -87,7 +87,7 @@ export function UtilityList({ ledgers, agreementId, onRefresh, showToast }: Prop
     <View>
       <View className="flex-row justify-between items-center mb-4">
         <Text className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Utility Bills</Text>
-        <TouchableOpacity onPress={() => setShowAddModal(true)} className="bg-primary-50 px-3 py-1.5 rounded-lg flex-row items-center border border-primary-200">
+        <TouchableOpacity onPress={() => setShowAddModal(true)} className="bg-white  px-3 py-1.5 rounded-lg flex-row items-center border border-primary-200">
           <Ionicons name="add" size={14} color="#0f766e" />
           <Text className="text-primary-700 font-bold ml-1 text-xs">Add Utility</Text>
         </TouchableOpacity>

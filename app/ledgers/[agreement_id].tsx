@@ -98,7 +98,7 @@ export default function ManageFinancesScreen() {
         {activeTab === 'utilities' && <UtilityList ledgers={finances.utilityLedgers} agreementId={agreement_id} onRefresh={fetchFinances} showToast={showToast}/>}
 
         {/* MISC CHARGES TAB VIEW */}
-        {activeTab === 'misc' && <MiscList charges={finances.miscCharges} agreementId={agreement_id} />}
+        {activeTab === 'misc' && <MiscList charges={finances.miscCharges} agreementId={agreement_id} onRefresh={fetchFinances} showToast={showToast} />}
 
         <View className="h-12" />
       </ScrollView>
