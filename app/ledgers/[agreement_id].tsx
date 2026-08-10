@@ -10,6 +10,7 @@ import { RentList } from '@/components/finances/rent-list';
 import { UtilityList } from '@/components/finances/utility-list';
 import { MiscList } from '@/components/finances/misc-list';
 import { CustomToast } from '@/components/ui/toast';
+import { Ledger, MiscCharge } from '../types/types';
 
 
 export default function ManageFinancesScreen() {
@@ -17,7 +18,7 @@ export default function ManageFinancesScreen() {
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' as 'success' | 'error' });
   const showToast = (message: string, type: 'success' | 'error' = 'success') => setToast({ visible: true, message, type });
   const [isLoading, setIsLoading] = useState(true);
-  const [finances, setFinances] = useState<{ rentLedgers: any[], utilityLedgers: any[], miscCharges: any[] }>({
+  const [finances, setFinances] = useState<{ rentLedgers: Ledger[], utilityLedgers: Ledger[], miscCharges: MiscCharge[] }>({
     rentLedgers: [],
     utilityLedgers: [],
     miscCharges: []
@@ -30,9 +31,6 @@ export default function ManageFinancesScreen() {
     if (agreement_id) {
       const result = await getFinancialHistory(agreement_id);
       if (result.success && result.data) {
-        // Assuming your backend query separates or we filter entry_types
-        // rentLedgers where entry_type === 'rent'
-        // utilityLedgers where entry_type IN ('k_electric', 'gas', 'water')
         const allLedgers = result.data.rentLedgers || [];
         setFinances({
           rentLedgers: allLedgers.filter((l: any) => l.entry_type === 'rent'),
