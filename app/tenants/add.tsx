@@ -1,6 +1,7 @@
 import { FinancialsSection } from "@/components/tenants-form/financials-details-section";
 import { IdentificationSection } from "@/components/tenants-form/identification-details-section";
 import { TenantDetailsSection } from "@/components/tenants-form/tenants-details-section";
+import { DatePickerModal } from "@/components/ui/date-picker";
 import { getBuildings } from "@/db/queries/buildings.queries";
 import { registerNewTenant } from "@/db/queries/tenants.queries";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,13 +10,13 @@ import * as ImagePicker from "expo-image-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Alert, Keyboard, Modal, Text, TouchableOpacity, View, } from "react-native";
+import { Alert, Keyboard, Text, TouchableOpacity, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import TenantFormData from "../types/types";
-import { DatePickerModal } from "@/components/ui/date-picker";
+import { TenantFormData } from "../../types/types";
 
 export default function AddTenantScreen() {
-  const {buildingId, buildingName: presetBuildingName } = useLocalSearchParams<{ buildingId: string; buildingName?: string; }>();
+  const { buildingId, buildingName: presetBuildingName } =
+    useLocalSearchParams<{ buildingId: string; buildingName?: string }>();
 
   // Dates & Images
   const [cnicImage, setCnicImage] = useState<string | null>(null);
@@ -29,10 +30,20 @@ export default function AddTenantScreen() {
   const [showMoveInPicker, setShowMoveInPicker] = useState(false);
 
   // Buildings data
-  const [buildingsList, setBuildingsList] = useState<{id: string; name: string }[]>([]);
-  const buildingOptions = buildingsList.map((b) => ({ label: b.name, value: b.name, }));
+  const [buildingsList, setBuildingsList] = useState<
+    { id: string; name: string }[]
+  >([]);
+  const buildingOptions = buildingsList.map((b) => ({
+    label: b.name,
+    value: b.name,
+  }));
 
-  const { control, handleSubmit, formState: { errors }, getValues, } = useForm<TenantFormData>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    getValues,
+  } = useForm<TenantFormData>({
     defaultValues: {
       fullName: "",
       contactNumber: "",

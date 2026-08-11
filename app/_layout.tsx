@@ -7,11 +7,20 @@ import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import  { KeyboardProvider }  from "react-native-keyboard-controller";
 import { db } from '@/db';
 import migrations from '@/drizzle/migrations';
+import { useEffect } from 'react';
+import { syncMonthlyRentLedgers } from '@/db/queries/ledgers.queries';
 
 const expoDb = openDatabaseSync('tenencyManagement.db');
 
 export default function RootLayout() {
   useDrizzleStudio(expoDb);
+  useEffect(() => {
+    const runAppSync = async () => {
+      await syncMonthlyRentLedgers();
+    };
+
+    runAppSync();
+  }, []);
 
   const { success, error } = useMigrations(db, migrations);
 
