@@ -1,12 +1,7 @@
 import { CustomSelect } from "@/components/ui/select";
-import TenantFormData from "@/types/types";
+import { TenantFormData } from "@/types/types";
 import { Dayjs } from "dayjs";
-import {
-    Control,
-    Controller,
-    FieldErrors,
-    UseFormGetValues
-} from "react-hook-form";
+import { Control, Controller, FieldErrors, UseFormGetValues } from "react-hook-form";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 
 type Props = {

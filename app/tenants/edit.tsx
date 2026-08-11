@@ -4,10 +4,7 @@ import { TenantDetailsSection } from "@/components/tenants-form/tenants-details-
 import { DatePickerModal } from "@/components/ui/date-picker";
 import { CustomToast } from "@/components/ui/toast";
 import { getBuildings } from "@/db/queries/buildings.queries";
-import {
-    getFullTenantDetails,
-    updateExistingTenant,
-} from "@/db/queries/tenants.queries";
+import { getFullTenantDetails, updateExistingTenant, } from "@/db/queries/tenants.queries";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
 import * as DocumentPicker from "expo-document-picker";
@@ -15,15 +12,9 @@ import * as ImagePicker from "expo-image-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import {
-    ActivityIndicator,
-    Keyboard,
-    Text,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import { ActivityIndicator, Keyboard, Text, TouchableOpacity, View, } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import TenantFormData from "../../types/types";
+import { TenantFormData } from "../../types/types";
 
 export default function EditTenantScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

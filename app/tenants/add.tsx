@@ -10,15 +10,9 @@ import * as ImagePicker from "expo-image-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import {
-    Alert,
-    Keyboard,
-    Text,
-    TouchableOpacity,
-    View
-} from "react-native";
+import { Alert, Keyboard, Text, TouchableOpacity, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import TenantFormData from "../../types/types";
+import { TenantFormData } from "../../types/types";
 
 export default function AddTenantScreen() {
   const { buildingId, buildingName: presetBuildingName } =

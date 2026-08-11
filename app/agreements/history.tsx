@@ -5,10 +5,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 
-import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as IntentLauncher from 'expo-intent-launcher';
-
 import { getTenantAgreementHistory } from '@/db/queries/agreements.queries';
 import { CustomToast } from '@/components/ui/toast';
 import { useDocumentViewer } from '@/hooks/useDocumentViewer';

@@ -1,4 +1,4 @@
-import TenantFormData from "@/types/types";
+import { TenantFormData } from "@/types/types";
 import { Control, Controller, FieldErrors } from "react-hook-form";
 import { Text, TextInput, View } from "react-native";
 

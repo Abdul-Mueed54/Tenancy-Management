@@ -1,4 +1,4 @@
-import TenantFormData from "@/types/types";
+import { TenantFormData } from "@/types/types";
 import { Dayjs } from "dayjs";
 import { Control, Controller, FieldErrors } from "react-hook-form";
 import { Image, Text, TextInput, TouchableOpacity, View } from "react-native";

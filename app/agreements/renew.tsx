@@ -147,7 +147,7 @@ export default function RenewAgreementScreen() {
       </View>
 
       <KeyboardAwareScrollView bottomOffset={80} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-       <Text className="text-xs text-red-500 mb-4">NOTE: Uploading the new document will not override the previously uploaded agreement, rather you may see it in the history of specific tenants.</Text>
+       <Text className="text-xs text-red-500 mb-4">NOTE: Uploading the new document will not override the previously uploaded agreement, but old one might be seen in the history of specific tenants.</Text>
 
         <CoreRenewalSection
           control={control}
