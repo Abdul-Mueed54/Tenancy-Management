@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { misc_charges, agreements } from '../schema'; 
+import { misc_charges, agreements, payments } from '../schema';
 import { db } from '..';
 
 export const addMiscCharge = async (agreementId: string, chargeType: string, amount: number, description: string, dateIncurred: string) => {
@@ -21,9 +21,27 @@ export const addMiscCharge = async (agreementId: string, chargeType: string, amo
 
 export const markMiscChargePaid = async (chargeId: string) => {
   try {
-    await db.update(misc_charges)
-      .set({ status: 'paid' })
-      .where(eq(misc_charges.id, chargeId));
+    await db.transaction(async (tx) => {
+      const [charge] = await tx
+        .select()
+        .from(misc_charges)
+        .where(eq(misc_charges.id, chargeId))
+        .limit(1);
+
+      if (!charge) throw new Error("Charge not found");
+
+      await tx.update(misc_charges)
+        .set({ status: 'paid' })
+        .where(eq(misc_charges.id, chargeId));
+
+      // 3. Record the permanent transaction (ledger_id is null for misc charges)
+      await tx.insert(payments).values({
+        agreement_id: charge.agreement_id,
+        amount: charge.amount,
+        payment_method: 'Cash',
+      });
+    });
+
     return { success: true };
   } catch (error) {
     console.error("Failed to mark charge as paid:", error);

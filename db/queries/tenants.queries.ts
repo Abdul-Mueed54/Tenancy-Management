@@ -151,7 +151,6 @@ export const toggleTenantStatus = async (
   }
 };
 
-// Update the Tenant and Agreement (Updated to use UUID)
 export const updateExistingTenant = async (tenantId: string, data: any) => {
   try {
     await db.transaction(async (tx) => {
@@ -177,6 +176,12 @@ export const updateExistingTenant = async (tenantId: string, data: any) => {
           rent_due_day: data.rentDueDay,
         })
         .where(eq(agreements.tenant_id, tenantId));
+
+      await tx.insert(activity_logs).values({
+        tenant_id: tenantId,
+        action_type: 'SYSTEM',
+        description: `Tenant profile and agreement details were manually updated.`,
+      });
     });
 
     return { success: true };
