@@ -73,3 +73,12 @@ export const activity_logs = sqliteTable('activity_logs', {
   description: text('description').notNull(), // e.g., 'Tenant was deactivated', 'Agreement uploaded'
   created_at: text('created_at').default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
+
+export const payments = sqliteTable('payments', {
+  id: text('id').primaryKey().$defaultFn(() => uuidv7()),
+  agreement_id: text('agreement_id').references(() => agreements.id).notNull(),
+  ledger_id: text('ledger_id').references(() => ledgers.id),
+  amount: integer('amount').notNull(),
+  payment_method: text('payment_method').default('Cash').notNull(),
+  ...timestamps,
+});

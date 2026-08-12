@@ -43,6 +43,13 @@
       "when": 1786015139632,
       "tag": "0005_chubby_nicolaos",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786556417874,
+      "tag": "0006_stiff_punisher",
+      "breakpoints": true
     }
   ]
 }
