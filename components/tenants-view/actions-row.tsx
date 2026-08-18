@@ -12,6 +12,7 @@ import { DocumentViewerModal } from '../ui/document-viewer-modal';
 
 type Props = {
   tenant: {
+    id: string;
     name: string;
     cnic_number: string;
     cnic_uri: string;
@@ -20,7 +21,7 @@ type Props = {
     permanent_address: string;
   };
   agreement: {
-    agreement_id: string;
+    id: string;
     attachment_uri: string;
   }
 };
@@ -38,8 +39,8 @@ export function ActionsRow({tenant, agreement}: Props){
     router.push({
       pathname: '/tenants/summary',
         params: {
-          cnic: tenant.cnic_number,
-          agreementId: agreement.agreement_id,
+          tenantId: tenant.id,
+          agreementId: agreement.id,
           name: tenant.name
         }
       });
@@ -61,7 +62,7 @@ export function ActionsRow({tenant, agreement}: Props){
         <Ionicons name="contract" size={20} color="#0f766e" />
         <Text className="text-primary-700 text-xs font-bold mt-1">Agreement</Text>
       </TouchableOpacity>
-      
+
       <DocumentViewerModal
         visible={showImageModal}
         imageUri={imageToView}

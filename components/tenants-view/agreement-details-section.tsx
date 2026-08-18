@@ -14,6 +14,7 @@ type Props = {
     advance_amount: string;
     start_date: string;
     rent_due_day: string;
+    move_in_date: string;
   }
 };
 
@@ -31,7 +32,7 @@ export default function DisplayAgreementDetailsOfTenant({tenant, agreement}: Pro
           </View>
           <View className="flex-row justify-between mb-3 border-b border-border/50 pb-3">
             <Text className="text-muted-foreground">Move-in Date</Text>
-            <Text className="font-medium text-foreground">{dayjs(agreement.start_date).format('DD MMM YYYY')}</Text>
+            <Text className="font-medium text-foreground">{dayjs(agreement.move_in_date).format('DD MMM YYYY')}</Text>
           </View>
           <View className="flex-row justify-between mb-3 border-b border-border/50 pb-3">
             <Text className="text-muted-foreground">Rent Due Date</Text>
