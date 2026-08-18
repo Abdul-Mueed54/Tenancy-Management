@@ -2,7 +2,7 @@ import { RegisterTenantPayload } from "@/types/types";
 import dayjs from "dayjs";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "..";
-import { activity_logs, agreements, ledgers, tenants } from "../schema";
+import { activity_logs, agreements, buildings, ledgers, tenants } from "../schema";
 
 // Add new tenant
 export const registerNewTenant = async (data: RegisterTenantPayload) => {
@@ -188,5 +188,33 @@ export const updateExistingTenant = async (tenantId: string, data: any) => {
   } catch (error) {
     console.error("Update failed:", error);
     return { success: false, error };
+  }
+};
+
+export const getAllTenants = async () => {
+  try {
+    const result = await db
+      .select({
+        tenantId: tenants.id,
+        agreementId: agreements.id,
+        name: tenants.name,
+        contact: tenants.contact_no,
+        cnic: tenants.cnic_number,
+        rentAmount: agreements.monthly_rent,
+        unitNumber: agreements.unit_number,
+        isActive: tenants.is_active,
+        buildingId: buildings.id,
+        buildingName: buildings.name,
+      })
+      .from(agreements)
+      .innerJoin(tenants, eq(agreements.tenant_id, tenants.id))
+      .innerJoin(buildings, eq(agreements.building_id, buildings.id))
+      .where(eq(agreements.is_active, true))
+      .orderBy(buildings.name, tenants.name, agreements.start_date);
+
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Failed to fetch universal tenants:", error);
+    return { success: false, data: [] };
   }
 };
