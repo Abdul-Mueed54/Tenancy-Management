@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "..";
-import { agreements, ledgers, misc_charges } from "../schema";
+import { agreements, ledgers, misc_charges, payments } from "../schema";
 import dayjs from "dayjs";
 
 export const getFinancialHistory = async (agreementId: string) => {
@@ -56,10 +56,18 @@ export const processLedgerPayment = async (ledgerId: string, paymentAmount: numb
       await tx.update(ledgers)
         .set({
           amount_paid: newAmountPaid,
-          amount_due: Math.max(0, newAmountDue), // Prevents negative due amounts
+          amount_due: Math.max(0, newAmountDue),
           status: newStatus
         })
         .where(eq(ledgers.id, ledgerId));
+
+      // 2. Record the permanent transaction
+      await tx.insert(payments).values({
+        agreement_id: currentLedger.agreement_id,
+        ledger_id: ledgerId,
+        amount: paymentAmount,
+        payment_method: 'Cash', // Can be dynamic later
+      });
     });
 
     return { success: true };

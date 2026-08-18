@@ -1,120 +1,189 @@
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { getTenantSummaryTimeline } from '@/db/queries/audit-logs.queries';
+import type { TimelineEvent, TimelineCategory } from '@/db/queries/audit-logs.queries';
 import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
 import dayjs from 'dayjs';
+import { CustomSelect } from '@/components/ui/select';
 
-type TimelineEvent = {
-  id: string;
-  date: string;
-  title: string;
-  desc: string;
-  type: 'log' | 'finance';
+const CATEGORY_LABEL: Record<TimelineCategory, string> = {
+  rent: 'Rent',
+  utility: 'Utility Bills',
+  misc: 'Misc Charges',
+  log: 'Activity',
 };
 
+const CATEGORY_ORDER: TimelineCategory[] = ['rent', 'utility', 'misc', 'log'];
+
+type MonthGroup = {
+  key: string;
+  label: string;
+  byCategory: Partial<Record<TimelineCategory, TimelineEvent[]>>;
+};
+
+function groupByMonth(timeline: TimelineEvent[]): MonthGroup[] {
+  const map = new Map<string, MonthGroup>();
+
+  timeline.forEach((event) => {
+    const key = event.monthKey;
+    if (!map.has(key)) {
+      map.set(key, { key, label: dayjs(`${key}-01`).format('MMMM YYYY'), byCategory: {} });
+    }
+    const group = map.get(key)!;
+    const bucket = group.byCategory[event.category] ?? (group.byCategory[event.category] = []);
+    bucket.push(event);
+  });
+
+  map.forEach((group) => {
+    Object.values(group.byCategory).forEach((events) => {
+      events?.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    });
+  });
+
+  return Array.from(map.values()).sort((a, b) => (a.key < b.key ? 1 : -1));
+}
+
+function getEventStyle(type: TimelineEvent['type']) {
+  if (type === 'finance_pay') return { icon: 'checkmark-circle' as const, color: '#16a34a' };
+  if (type === 'finance_bill') return { icon: 'document-text' as const, color: '#b45309' };
+  return { icon: 'information-circle' as const, color: '#64748b' };
+}
+
 export default function TenantSummaryScreen() {
-  const { cnic, agreementId, name } = useLocalSearchParams<{ cnic: string; agreementId: string; name: string }>();
+  const { tenantId, agreementId, name } = useLocalSearchParams<{ tenantId: string; agreementId: string; name: string }>();
+
+  const [tenantInfo, setTenantInfo] = useState<any>(null);
+  const [agreementInfo, setAgreementInfo] = useState<any>(null);
+  const [buildingInfo, setBuildingInfo] = useState<any>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchTimeline = async () => {
-      if (cnic && agreementId) {
-        const result = await getTenantSummaryTimeline(cnic, agreementId);
-        if (result.success) setTimeline(result.data as TimelineEvent[]);
+      if (tenantId && agreementId) {
+        const result = await getTenantSummaryTimeline(tenantId, agreementId);
+        if (result.success && result.data) {
+          setTenantInfo(result.data.tenant);
+          setAgreementInfo(result.data.agreement);
+          setBuildingInfo(result.data.building);
+          setTimeline(result.data.timeline);
+        }
       }
       setIsLoading(false);
     };
     fetchTimeline();
-  }, [cnic, agreementId]);
+  }, [tenantId, agreementId]);
+
+  const relevantEvents = useMemo(() => timeline.filter((e) => e.type !== 'finance_bill'), [timeline]);
+  const months = useMemo(() => groupByMonth(relevantEvents), [relevantEvents]);
+
+  useEffect(() => {
+    if (months.length > 0 && !months.some((m) => m.key === selectedMonthKey)) {
+      setSelectedMonthKey(months[0].key);
+    }
+  }, [months, selectedMonthKey]);
+
+  const selectedMonth = months.find((m) => m.key === selectedMonthKey) ?? null;
+
+  // We map your months array into the precise { label, value } format your CustomSelect demands
+  const monthOptions = useMemo(() => {
+    return months.map(m => ({ label: m.label, value: m.key }));
+  }, [months]);
 
   const handleDownloadPDF = async () => {
     try {
-      // Helper function to translate technical titles into plain English
-      const getFriendlyTitle = (title: string) => {
-        if (title === 'STATUS_CHANGE') return 'Account Status Updated';
-        if (title === 'DOCUMENT') return 'Document Attached';
-        if (title === 'RENT GENERATED') return 'Monthly Rent Billed';
-        if (title === 'MISC CHARGE') return 'Additional Charge';
-        return title.replace('_', ' ');
-      };
+      if (!tenantInfo || !agreementInfo) return;
 
-      // 1. Build a clean, non-technical HTML string
+      const renderEvent = (event: TimelineEvent) => `
+        <div class="event-row">
+          <div class="date-col">${dayjs(event.date).format('MMM D')}<br/><span class="time">${dayjs(event.date).format('h:mm A')}</span></div>
+          <div class="content-col">
+            <p class="event-title">${event.title}</p>
+            <p class="event-desc">${event.desc}</p>
+          </div>
+          ${event.amount != null ? `<div class="amount-col">Rs ${event.amount}</div>` : ''}
+        </div>`;
+
+      const renderMonth = (month: MonthGroup) => `
+        <div class="month-section">
+          <h2 class="month-title">${month.label}</h2>
+          ${CATEGORY_ORDER.filter((c) => month.byCategory[c]?.length)
+            .map(
+              (c) => `
+            <div class="category-block">
+              <h3 class="category-title">${CATEGORY_LABEL[c]}</h3>
+              ${month.byCategory[c]!.map(renderEvent).join('')}
+            </div>`
+            )
+            .join('')}
+        </div>`;
+
       const htmlContent = `
         <html>
           <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             <style>
-              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 30px; color: #222; }
-              .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #0f766e; padding-bottom: 20px; }
-              .title { font-size: 26px; font-weight: bold; color: #0f766e; margin: 0 0 10px 0; }
-              .subtitle { font-size: 16px; color: #555; margin: 0; }
-              .event-row { display: flex; align-items: flex-start; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eaeaea; }
-              .date-col { width: 140px; font-size: 14px; font-weight: bold; color: #444; padding-top: 2px; }
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #1f2937; }
+              .header { text-align: center; margin-bottom: 28px; }
+              .title { font-size: 24px; font-weight: 600; color: #556b2f; margin: 0 0 4px 0; }
+              .subtitle { color: #6b7280; margin: 0; font-size: 12px; }
+
+              .info-section { margin-bottom: 28px; }
+              .info-section h2 { font-size: 15px; color: #556b2f; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px; font-weight: 600; }
+              .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+              .grid-item span { color: #6b7280; display: block; font-size: 11px; }
+              .grid-item p { margin: 2px 0 0 0; font-size: 13px; font-weight: 500; }
+
+              .month-section { margin-bottom: 24px; }
+              .month-title { font-size: 15px; font-weight: 600; color: #111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 10px; }
+              .category-block { margin-bottom: 14px; }
+              .category-title { font-size: 11px; font-weight: 600; color: #556b2f; margin: 0 0 6px 0; }
+
+              .event-row { display: flex; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+              .date-col { width: 70px; font-size: 11px; color: #9ca3af; }
+              .date-col .time { display: block; }
               .content-col { flex: 1; }
-              .event-title { font-weight: bold; font-size: 16px; margin: 0 0 6px 0; color: #111; }
-              .event-desc { font-size: 14px; margin: 0; color: #555; line-height: 1.5; }
+              .event-title { font-weight: 500; font-size: 13px; margin: 0; color: #111827; }
+              .event-desc { font-size: 12px; margin: 2px 0 0 0; color: #6b7280; }
+              .amount-col { font-size: 13px; font-weight: 600; color: #111827; }
             </style>
           </head>
           <body>
             <div class="header">
-              <h1 class="title">Tenant History Report</h1>
-              <p class="subtitle"><strong>Tenant:</strong> ${name}</p>
-              <p class="subtitle"><strong>CNIC:</strong> ${cnic}</p>
-              <p class="subtitle" style="margin-top: 10px; font-size: 14px; color: #888;">Generated on ${dayjs().format('MMMM D, YYYY')}</p>
+              <h1 class="title">Tenant Report</h1>
+              <p class="subtitle">Generated ${dayjs().format('MMMM D, YYYY')}</p>
             </div>
 
-            ${timeline.length === 0 ? '<p style="text-align:center; color: #888;">No history found for this tenant.</p>' : ''}
-
-            ${timeline.map(event => `
-              <div class="event-row">
-                <!-- Simplified Date format (e.g., Aug 3, 2026) -->
-                <div class="date-col">
-                  ${dayjs(event.date).format('MMM D, YYYY')}
-                </div>
-
-                <div class="content-col">
-                  <!-- Friendly Title -->
-                  <h3 class="event-title">${getFriendlyTitle(event.title)}</h3>
-                  <!-- The actual description -->
-                  <p class="event-desc">${event.desc}</p>
-                </div>
+            <div class="info-section">
+              <h2>Tenant Profile</h2>
+              <div class="grid">
+                <div class="grid-item"><span>Full Name</span><p>${tenantInfo.name}</p></div>
+                <div class="grid-item"><span>CNIC Number</span><p>${tenantInfo.cnic_number || 'N/A'}</p></div>
+                <div class="grid-item"><span>Contact Number</span><p>${tenantInfo.contact_no || 'N/A'}</p></div>
+                <div class="grid-item"><span>Monthly Rent</span><p>Rs ${agreementInfo.monthly_rent}</p></div>
+                <div class="grid-item"><span>Building</span><p>${buildingInfo?.name || 'N/A'}</p></div>
+                <div class="grid-item"><span>Move In Date</span><p>${agreementInfo.move_in_date ? dayjs(agreementInfo.move_in_date).format('MMM D, YYYY') : 'N/A'}</p></div>
               </div>
-            `).join('')}
+            </div>
+
+            ${months.map(renderMonth).join('')}
           </body>
-        </html>
-      `;
+        </html>`;
 
-      // 2. Generate the hidden PDF file
-      const { uri } = await Print.printToFileAsync({ html: htmlContent });
-
-      // 3. Share it
-      const isAvailable = await Sharing.isAvailableAsync();
-      if (isAvailable) {
-        await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
-      } else {
-        alert('Sharing is not available on this device');
-      }
+      await Print.printAsync({ html: htmlContent });
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      alert('Could not generate the PDF document.');
+      console.error(error);
     }
-  };
-
-  const getIconForEvent = (title: string, type: string) => {
-    if (type === 'finance') return <Ionicons name="cash" size={20} color="#0f766e" />;
-    if (title === 'STATUS_CHANGE') return <Ionicons name="power" size={20} color="#dc2626" />;
-    if (title === 'DOCUMENT') return <Ionicons name="document-attach" size={20} color="#0284c7" />;
-    return <Ionicons name="information-circle" size={20} color="#64748b" />;
   };
 
   if (isLoading) {
     return (
       <View className="flex-1 justify-center items-center bg-white">
-        <ActivityIndicator size="large" color="#0f766e" />
+        <ActivityIndicator size="large" color="#556b2f" />
       </View>
     );
   }
@@ -123,8 +192,8 @@ export default function TenantSummaryScreen() {
     <View className="flex-1 bg-white">
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* HEADER */}
-      <View className="flex-row justify-between items-center px-4 pt-12 pb-4 border-b border-border bg-white shadow-sm z-10">
+      {/* Header */}
+      <View className="flex-row justify-between items-center px-4 pt-12 pb-4 border-b border-border bg-white">
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="p-2 mr-1 -ml-2">
             <Ionicons name="chevron-back" size={24} color="#000" />
@@ -135,57 +204,125 @@ export default function TenantSummaryScreen() {
           </View>
         </View>
 
-        <TouchableOpacity
-          onPress={handleDownloadPDF}
-          className="bg-primary-50 px-3 py-2 rounded-lg flex-row items-center"
-        >
-          <Ionicons name="download" size={16} color="#0f766e" />
+        <TouchableOpacity onPress={handleDownloadPDF} className="bg-primary-50 px-3 py-2 rounded-lg flex-row items-center">
+          <Ionicons name="download" size={16} color="#556b2f" />
           <Text className="text-primary-700 font-bold ml-1 text-xs">Export PDF</Text>
         </TouchableOpacity>
       </View>
 
-      {/* TIMELINE */}
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 bg-muted/10 p-4">
+      {/* Using your CustomSelect Component */}
+      {months.length > 0 && (
+        <View className="flex-row justify-between items-center px-5 py-3 border-b border-border bg-white z-10">
+          <Text className="text-sm font-semibold text-muted-foreground">Timeline</Text>
 
-        <View className="mb-8">
-          {timeline.length === 0 ? (
-            <Text className="text-center text-muted-foreground mt-10">No history found for this tenant.</Text>
-          ) : (
-            timeline.map((event, index) => {
-              const isLast = index === timeline.length - 1;
+          {/* We wrap it in a fixed width so it doesn't take over the entire row */}
+          <View className="w-[160px]">
+            <CustomSelect
+              options={monthOptions}
+              value={selectedMonthKey || undefined}
+              onValueChange={setSelectedMonthKey}
+              placeholder="Select Month"
+            />
+          </View>
+        </View>
+      )}
 
-              return (
-                <View key={event.id} className="flex-row mb-4">
+      {/* Main Content */}
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+        {tenantInfo && agreementInfo && (
+          <View className="px-5 pt-6 pb-5 border-b border-border">
+            <View className="flex-row items-center mb-5">
+              <View className="w-12 h-12 rounded-full bg-primary-50 items-center justify-center mr-3">
+                <Text className="text-primary-700 font-bold text-base">
+                  {tenantInfo.name?.slice(0, 2).toUpperCase()}
+                </Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-lg font-bold text-foreground">{tenantInfo.name}</Text>
+                <Text className="text-xs text-muted-foreground">{buildingInfo?.name || 'No building'}</Text>
+              </View>
+              <View className={`px-2.5 py-1 rounded-full ${tenantInfo.is_active ? 'bg-green-50' : 'bg-slate-100'}`}>
+                <Text className={`text-[10px] font-semibold ${tenantInfo.is_active ? 'text-green-700' : 'text-slate-500'}`}>
+                  {tenantInfo.is_active ? 'Active' : 'Inactive'}
+                </Text>
+              </View>
+            </View>
 
-                  {/* Left Column: Date & Time */}
-                  <View className="w-20 items-end pt-1 pr-3">
-                    <Text className="text-xs font-bold text-foreground">{dayjs(event.date).format('DD MMM')}</Text>
-                    <Text className="text-[10px] text-muted-foreground mt-0.5">{dayjs(event.date).format('h:mm A')}</Text>
-                  </View>
+            <View className="flex-row mb-5">
+              <View className="flex-1">
+                <Text className="text-[11px] text-muted-foreground">Monthly rent</Text>
+                <Text className="text-sm font-semibold text-foreground mt-0.5">Rs {agreementInfo.monthly_rent}</Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-[11px] text-muted-foreground">Deposit</Text>
+                <Text className="text-sm font-semibold text-foreground mt-0.5">Rs {agreementInfo.advance_amount || 0}</Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-[11px] text-muted-foreground">Due day</Text>
+                <Text className="text-sm font-semibold text-foreground mt-0.5">Day {agreementInfo.rent_due_day || 1}</Text>
+              </View>
+            </View>
 
-                  {/* Middle Column: The Line & Icon */}
-                  <View className="items-center">
-                    <View className="w-8 h-8 rounded-full bg-white border border-border items-center justify-center shadow-sm z-10">
-                      {getIconForEvent(event.title, event.type)}
-                    </View>
-                    {/* The vertical connecting line */}
-                    {!isLast && <View className="w-[2px] h-full bg-border -mt-2 -mb-6" />}
-                  </View>
+            <View>
+              <DetailRow label="CNIC" value={tenantInfo.cnic_number || 'N/A'} />
+              <DetailRow
+                label="CNIC expiry"
+                value={tenantInfo.cnic_expiry_date ? dayjs(tenantInfo.cnic_expiry_date).format('MMM D, YYYY') : 'N/A'}
+              />
+              <DetailRow label="Contact" value={tenantInfo.contact_no || 'N/A'} />
+              <DetailRow
+                label="Move in"
+                value={agreementInfo.move_in_date ? dayjs(agreementInfo.move_in_date).format('MMM D, YYYY') : 'N/A'}
+              />
+              <DetailRow label="Address" value={tenantInfo.permanent_address || 'N/A'} last />
+            </View>
+          </View>
+        )}
 
-                  {/* Right Column: The Content Card */}
-                  <View className="flex-1 pl-3 pb-2">
-                    <View className="bg-white p-3 rounded-xl border border-border shadow-sm">
-                      <Text className="text-xs font-bold text-muted-foreground mb-1">{event.title.replace('_', ' ')}</Text>
-                      <Text className="text-sm text-foreground">{event.desc}</Text>
-                    </View>
-                  </View>
-
-                </View>
-              );
-            })
+        <View className="px-5 pt-5 pb-10">
+          {months.length === 0 && (
+            <Text className="text-sm text-muted-foreground text-center py-10">No payments recorded yet.</Text>
           )}
+
+          {selectedMonth &&
+            CATEGORY_ORDER.filter((c) => selectedMonth.byCategory[c]?.length).map((category) => (
+              <View key={category} className="mb-4">
+                <Text className="text-xs font-semibold text-primary-700 mb-1.5">{CATEGORY_LABEL[category]}</Text>
+                {selectedMonth.byCategory[category]!.map((event) => (
+                  <EventRow key={event.id} event={event} />
+                ))}
+              </View>
+            ))}
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+function DetailRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View className={`flex-row justify-between py-2 ${last ? '' : 'border-b border-slate-100'}`}>
+      <Text className="text-xs text-muted-foreground">{label}</Text>
+      <Text className="text-xs text-foreground font-medium text-right ml-4 flex-1" numberOfLines={2}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function EventRow({ event }: { event: TimelineEvent }) {
+  const style = getEventStyle(event.type);
+  return (
+    <View className="flex-row items-start py-2 border-b border-slate-100">
+      <Ionicons name={style.icon} size={16} color={style.color} style={{ marginTop: 2, marginRight: 8 }} />
+      <View className="flex-1">
+        <View className="flex-row justify-between items-start">
+          <Text className="text-sm text-foreground font-medium flex-1 mr-2">{event.title}</Text>
+          {event.amount != null && <Text className="text-sm text-foreground font-semibold">Rs {event.amount}</Text>}
+        </View>
+        <Text className="text-xs text-muted-foreground mt-0.5">{event.desc}</Text>
+        <Text className="text-[10px] text-muted-foreground mt-1">{dayjs(event.date).format('MMM D, h:mm A')}</Text>
+      </View>
     </View>
   );
 }
